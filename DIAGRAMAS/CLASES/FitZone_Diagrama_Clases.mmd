@@ -1,0 +1,165 @@
+classDiagram
+direction LR
+
+class Rol {
+  id: String
+  nombre: String
+  autorizaExcepciones(): boolean
+}
+
+class Empleado {
+  id: String
+  nombre: String
+  darDeAltaSocio(s: Socio)
+  autorizarCancelacionClase(c: Clase)
+  procesarBaja(s: Socio)
+}
+
+class SolicitudExcepcion {
+  id: String
+  tipo: String
+  estado: String
+  aprobar(e: Empleado)
+  rechazar(e: Empleado)
+}
+
+class Sancion {
+  id: String
+  fechaInicio: Date
+  fechaFin: Date
+  motivo: String
+  estado: String
+  estaVigente(): boolean
+}
+
+class Falta {
+  fecha: Date
+  claseId: String
+}
+
+class Plan {
+  id: String
+  nombre: String
+  incluyeClasesPremium: boolean
+  duracionMeses: int
+  costo: decimal
+  incluyeClase(c: Clase): boolean
+}
+
+class Membresia {
+  id: String
+  fechaInicio: Date
+  fechaVencimiento: Date
+  estado: String
+  saldoAFavor: decimal
+  estaVigente(): boolean
+  activar(actual: Membresia)
+  renovar()
+  cambiarPlan(p: Plan)
+}
+
+class Socio {
+  id: String
+  nombre: String
+  fechaNacimiento: Date
+  fechaAlta: Date
+  correo: String
+  esMenorDeEdad(): boolean
+  reservarClase(c: Clase)
+  cancelarReserva(r: Reserva)
+  consultarVencimiento(): Date
+  registrarFalta()
+  estaSancionado(): boolean
+}
+
+class Deslinde {
+  id: String
+  fechaFirma: Date
+  cuestionarioSalud: boolean
+  registrarFirma()
+}
+
+class MarcajeEntrada {
+  id: String
+  fechaHora: DateTime
+  registrar()
+}
+
+class Reserva {
+  id: String
+  fecha: Date
+  estado: String
+  confirmar()
+  cancelar()
+  registrarNoShow()
+  liberarPorRetraso()
+  notificarCancelacion()
+}
+
+class Notificacion {
+  id: String
+  tipo: String
+  fechaEnvio: DateTime
+  enviar()
+}
+
+class ListaEspera {
+  id: String
+  orden: int
+  estado: String
+  fechaNotificacion: DateTime
+  asignarAlPresente()
+  notificarLugar()
+  confirmar()
+  expirar()
+}
+
+class Clase {
+  id: String
+  nombre: String
+  horario: DateTime
+  capacidadMaxima: int
+  esPremium: boolean
+  tieneLugarDisponible(): boolean
+  solicitarCancelacion()
+  cancelar()
+}
+
+class Instructor {
+  id: String
+  nombre: String
+  solicitarCancelacion(c: Clase)
+}
+
+class Reportes {
+  reporteTrafico(desde: Date, hasta: Date)
+  reporteDemanda(desde: Date, hasta: Date)
+}
+
+Rol "1" -- "*" Empleado : tiene
+Empleado "1" -- "*" SolicitudExcepcion : solicita
+Empleado "0..1" -- "*" SolicitudExcepcion : resuelve
+SolicitudExcepcion ..> Socio : socio (opcional)
+SolicitudExcepcion ..> Clase : clase (opcional)
+Socio "1" *-- "0..*" Falta : acumula
+Socio "1" *-- "0..*" Sancion : recibe
+Socio "1" -- "*" Membresia : posee
+Membresia "*" -- "1" Plan : corresponde a
+Socio "1" *-- "0..1" Deslinde : firma
+Socio "1" -- "*" MarcajeEntrada : genera
+Socio "1" -- "*" Reserva : realiza
+Socio "1" -- "*" ListaEspera : se anota en
+Reserva "0..1" -- "*" Notificacion : dispara
+ListaEspera "0..1" -- "*" Notificacion : dispara
+Reserva "*" -- "1" Clase : es para
+ListaEspera "*" -- "1" Clase : genera
+Clase "*" -- "1" Instructor : impartida por
+Reportes ..> Reserva : consulta
+Reportes ..> ListaEspera : consulta
+Reportes ..> MarcajeEntrada : consulta
+Reserva ..> ListaEspera : libera lugar para
+Instructor ..> Clase : solicita cancelación
+Clase ..> Empleado : pasa la solicitud a
+Empleado ..> Clase : cancela
+Socio ..> Clase : consulta lugar en
+Notificacion ..> Socio : avisa a

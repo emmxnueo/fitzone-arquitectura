@@ -1,0 +1,168 @@
+%%{init: {"flowchart": {"nodeSpacing": 60, "rankSpacing": 100, "subGraphTitleMargin": {"top": 70, "bottom": 30}}, "themeCSS": ".cluster-label text, .cluster-label span, .cluster-label p, .cluster-label .nodeLabel {font-size: 40px !important; font-weight: bold !important;}"}}%%
+classDiagram
+direction TB
+
+namespace Dominio {
+    class Socio {
+        <<AggregateRoot>>
+        +registrarFalta()
+        +estaSancionado()
+    }
+    class Membresia {
+        <<AggregateRoot>>
+        +activar()
+        +renovar()
+        +cambiarPlan()
+    }
+    class Plan {
+        <<AggregateRoot>>
+    }
+    class Clase {
+        <<AggregateRoot>>
+        +reservar()
+        +cancelarReserva()
+        +solicitarCancelacion()
+    }
+    class Instructor {
+        <<AggregateRoot>>
+    }
+    class Empleado {
+        <<AggregateRoot>>
+    }
+    class SolicitudExcepcion {
+        <<AggregateRoot>>
+        +aprobar()
+        +rechazar()
+    }
+    class Reserva {
+        <<Entity>>
+    }
+    class EntradaListaEspera {
+        <<Entity>>
+    }
+    class ValueObjects {
+        <<ValueObject>>
+        Sancion
+        Falta
+        Deslinde
+        PeriodoVigencia
+        SaldoAFavor
+        NumeroSocio
+        DatosContacto
+        FechaNacimiento
+        Capacidad
+        Horario
+        Salon
+        CategoriaDeClase
+        EstadoReserva
+        PlazoConfirmacion
+        Rol
+        TipoExcepcion
+    }
+    class DomainServices {
+        <<DomainService>>
+        ElegibilidadDeReserva
+        CalculoDeCambioDePlan
+    }
+    class DomainEvents {
+        <<DomainEvent>>
+        DeslindeFirmado
+        SancionAplicada
+        MembresiaVencida
+        PlanCambiado
+        IngresoRegistrado
+        ReservaCancelada
+        LugarLiberado
+        LugarOfrecidoASocio
+        OfertaDeLugarExpirada
+        NoShowRegistrado
+        CancelacionDeClaseSolicitada
+        ClaseCancelada
+        SolicitudExcepcionCreada
+    }
+}
+
+namespace Aplicacion {
+    class ApplicationServices {
+        <<ApplicationService>>
+        SocioService
+        MembresiaService
+        ReservaService
+        ClaseService
+        SolicitudExcepcionService
+    }
+    class Commands {
+        <<Command>>
+        ReservarClase
+        CancelarReserva
+    }
+    class Queries {
+        <<Query>>
+        ConsultarVencimiento
+        ConsultarAfluencia
+        ConsultarDemanda
+        ConsultarCatalogo
+    }
+    class RepositoryInterfaces {
+        <<interface>>
+        SocioRepository
+        MembresiaRepository
+        PlanRepository
+        ClaseRepository
+        InstructorRepository
+        EmpleadoRepository
+        SolicitudExcepcionRepository
+        UnitOfWork
+    }
+}
+
+namespace Infraestructura {
+    class RepositoriosSql {
+        <<implementacion>>
+        Sql para cada Repository
+        InMemory para pruebas
+    }
+    class LectoresDeReportes {
+        <<TableModule>>
+        membresias
+        afluencia
+        demanda
+        catalogo
+    }
+    class SuscriptoresDeEventos {
+        <<EventSubscriber>>
+        notificaciones push y correo
+    }
+}
+
+Reserva "0..*" --* "1" Clase
+EntradaListaEspera "0..*" --* "1" Clase
+ValueObjects --* Socio
+ValueObjects --* Membresia
+ValueObjects --* Clase
+Membresia ..> Socio : socioId
+Plan <.. Membresia : planId
+Instructor <.. Clase : instructorId
+Empleado <.. SolicitudExcepcion : solicitadaPor
+
+Socio <.. DomainServices
+Membresia <.. DomainServices
+Plan <.. DomainServices
+Clase <.. DomainServices
+
+DomainEvents <.. Socio : publica
+DomainEvents <.. Membresia : publica
+DomainEvents <.. Clase : publica
+DomainEvents <.. SolicitudExcepcion : publica
+
+Socio <.. ApplicationServices : orquesta
+Membresia <.. ApplicationServices : orquesta
+Clase <.. ApplicationServices : orquesta
+SolicitudExcepcion <.. ApplicationServices : orquesta
+DomainServices <.. ApplicationServices : invoca
+ApplicationServices ..> RepositoryInterfaces : persistencia
+ApplicationServices <.. Commands : delega
+Queries ..> LectoresDeReportes : consulta
+
+RepositoriosSql ..|> RepositoryInterfaces : implementa
+DomainEvents <.. SuscriptoresDeEventos : reacciona a

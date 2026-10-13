@@ -1,0 +1,95 @@
+sequenceDiagram
+autonumber
+participant Externo as Origen externo
+participant Socio
+participant Membresia as Membresía
+participant Sancion as Sanción
+participant Clase
+participant Reserva
+participant ListaEspera
+participant Notificacion as Notificación
+
+Note over Externo,Notificacion: Solicitud de reserva
+Externo->>Socio: reservarClase(c)
+activate Socio
+
+Socio->>Membresia: estaVigente()
+activate Membresia
+Membresia-->>Socio: boolean
+deactivate Membresia
+Note right of Membresia: Sin periodo de gracia (P2, BRD 2.7)
+
+Socio->>Sancion: estaVigente()
+activate Sancion
+Sancion-->>Socio: boolean
+deactivate Sancion
+Note right of Sancion: Verdadera solo si está dentro de sus fechas. La sanción se aplica de forma automática (P10)
+
+alt membresía vigente y sin sanción vigente
+  Socio->>Clase: tieneLugarDisponible()
+  activate Clase
+  Clase-->>Socio: boolean
+  deactivate Clase
+  alt hay lugar (cupo fijo por salón, P8)
+    Socio->>Reserva: confirmar()
+    activate Reserva
+    Reserva-->>Socio: reserva confirmada
+    deactivate Reserva
+  else clase llena
+    Socio->>ListaEspera: crear entrada en lista de espera
+    activate ListaEspera
+    Note right of ListaEspera: Se crea una entrada con orden FIFO y estado en espera
+    ListaEspera-->>Socio: en lista (orden FIFO)
+    deactivate ListaEspera
+  end
+else membresía vencida o sanción vigente
+  Socio-->>Externo: reserva rechazada (P2, P10)
+end
+deactivate Socio
+
+Note over Externo,Notificacion: Se libera un lugar por cancelación de una reserva
+Externo->>Reserva: cancelar()
+activate Reserva
+Note right of Reserva: Cancelación con ≥1 h de anticipación (P11). Se ofrece el lugar con 15 min para confirmar (P15)
+Reserva->>ListaEspera: notificarLugar()
+deactivate Reserva
+activate ListaEspera
+
+loop por cada socio en orden FIFO, hasta que alguien confirme (P15)
+  ListaEspera->>Notificacion: enviar()
+  activate Notificacion
+  Note right of Notificacion: Push y correo (decisión del equipo, P16 solo lo define para cancelaciones)
+  Notificacion-->>Socio: avisa a
+  deactivate Notificacion
+  alt confirma en 15 min (P15)
+    Socio->>ListaEspera: confirmar()
+    ListaEspera->>Reserva: confirmar()
+    activate Reserva
+    Note over Reserva,ListaEspera: ListaEspera confirma la reserva (la dependencia del diagrama de clases se interpreta en ambos sentidos)
+    deactivate Reserva
+  else no confirma en 15 min (fechaNotificacion + 15 min, P15)
+    Externo->>ListaEspera: expirar()
+    Note left of ListaEspera: Se dispara al cumplirse 15 min desde fechaNotificacion
+    Note right of ListaEspera: Pasa al siguiente socio de la lista
+  end
+end
+Note over ListaEspera,Notificacion: Si nadie confirma, el lugar queda libre y la clase sigue su curso (decisión del equipo)
+deactivate ListaEspera
+
+Note over Externo,Notificacion: Se libera un lugar por tolerancia de retraso
+Externo->>Reserva: liberarPorRetraso()
+activate Reserva
+Note right of Reserva: Retraso de más de 10 min con la clase ya iniciada (P12)
+Reserva->>ListaEspera: asignarAlPresente()
+deactivate Reserva
+activate ListaEspera
+alt hay un socio presente en la lista de espera
+  Note right of ListaEspera: Asigna el lugar de inmediato al primero que esté presente, sin esperar los 15 min (P12)
+  ListaEspera->>Reserva: confirmar()
+  activate Reserva
+  Note over Reserva,ListaEspera: ListaEspera confirma la reserva (misma interpretación del diagrama de clases)
+  deactivate Reserva
+else no hay ningún socio presente
+  Note right of ListaEspera: El lugar queda libre y la clase sigue su curso
+end
+deactivate ListaEspera

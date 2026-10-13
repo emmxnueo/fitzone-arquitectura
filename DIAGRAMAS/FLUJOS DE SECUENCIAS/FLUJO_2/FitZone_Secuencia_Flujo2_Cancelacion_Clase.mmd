@@ -1,0 +1,55 @@
+sequenceDiagram
+autonumber
+participant Externo as Origen externo
+participant Instructor
+participant Clase
+participant Empleado
+participant Rol
+participant Reserva
+participant Notificacion as Notificación
+participant Socio
+
+Note over Externo,Socio: Solicitud de cancelación
+Externo->>Instructor: solicitarCancelacion(c)
+activate Instructor
+Instructor->>Clase: solicitarCancelacion()
+activate Clase
+Note right of Clase: Compara la hora actual con su horario. Si faltan menos de 2 h, la rechaza (P6)
+
+alt aviso con ≥2 h de anticipación (P6)
+  Clase->>Empleado: pasa la solicitud al Administrador
+  activate Empleado
+  Note right of Empleado: Empleado con rol Administrador (P6, P7)
+  Empleado->>Rol: autorizaExcepciones()
+  activate Rol
+  Rol-->>Empleado: boolean
+  deactivate Rol
+  Note right of Rol: Si autorizaExcepciones() es falso, el empleado no puede autorizar (P7, BN-08)
+
+  alt el Administrador autoriza
+    Empleado->>Empleado: autorizarCancelacionClase(c)
+    Empleado->>Clase: cancelar()
+    activate Clase
+    loop por cada Reserva de la clase (BN-03, US-07)
+      Clase->>Reserva: notificarCancelacion()
+      activate Reserva
+      Reserva->>Notificacion: enviar()
+      activate Notificacion
+      Note right of Notificacion: Push y correo (P16, BN-03)
+      Notificacion-->>Socio: avisa a
+      deactivate Notificacion
+      deactivate Reserva
+    end
+    Note over Clase,Reserva: Las reservas de una clase cancelada quedan sin efecto y no generan no-show (propuesta del equipo, el BRD no lo define)
+    deactivate Clase
+    Empleado-->>Instructor: cancelación autorizada
+  else el Administrador rechaza
+    Empleado-->>Instructor: solicitud rechazada
+    Note right of Empleado: La clase sigue programada (decisión del equipo)
+  end
+  deactivate Empleado
+else aviso con menos de 2 h (P6)
+  Clase-->>Instructor: solicitud rechazada por falta de aviso, sin pasar por el Administrador
+end
+deactivate Clase
+deactivate Instructor
